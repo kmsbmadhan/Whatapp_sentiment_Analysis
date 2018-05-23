@@ -14,54 +14,56 @@ library(syuzhet)
 library(dplyr ) 
 
 setwd("C:/Users/Maddy/Desktop/Whatsapp_sentiment_analysis")
-#get the data from whatsapp chat 
-text <- readLines("Karthi.txt")
 
-#let us create the corpus
-docs <- Corpus(VectorSource(text))
+#Read the data from whatsapp chat 
+content <- readLines("Karthi.txt")
 
-#clean our chat data
-trans <- content_transformer(function (x , pattern ) gsub(pattern, " ", x))
-docs <- tm_map(docs, trans, "/")
-docs <- tm_map(docs, trans, "@")
-docs <- tm_map(docs, trans, "\\|")
-docs <- tm_map(docs, content_transformer(tolower))
-docs <- tm_map(docs, removeNumbers)
-docs <- tm_map(docs, removeWords, stopwords("english"))
-docs <- tm_map(docs, removeWords, c("karthi","ddi"))
-docs <- tm_map(docs, removePunctuation)
-docs <- tm_map(docs, stripWhitespace)
-docs <- tm_map(docs, stemDocument)
+#Corpus creation
+corp <- Corpus(VectorSource(content))
 
-#create the document term matrix
-dtm <- TermDocumentMatrix(docs)
-mat <- as.matrix(dtm)
-v <- sort(rowSums(mat),decreasing=TRUE)
+#Pre-processing the chat file
+tran <- content_transformer(function (x , pattern ) gsub(pattern, " ", x))
+corp <- tm_map(corp, trans, "/")
+corp <- tm_map(corp, tran, "@")
+corp <- tm_map(corp, tran, "\\|")
+corp <- tm_map(corp, content_transformer(tolower))
+corp <- tm_map(corp, removeNumbers)
+corp <- tm_map(corp, removeWords, stopwords("english"))
+corp <- tm_map(corp, removeWords, c("karthi","ddi"))
+corp <- tm_map(corp, removePunctuation)
+corp <- tm_map(corp, stripWhitespace)
+corp <- tm_map(corp, stemDocument)
 
-#Data frame
-data <- data.frame(word = names(v),freq=v)
+#Document Term Matrix creation
+#-matrix that describes the frequency of terms that occur in a collection of documents-rows:documents,column:terms
+DTM <- TermDocumentMatrix(corp)
+mat <- as.matrix(DTM)
+a <- sort(rowSums(mat),decreasing=TRUE)
+
+#Table creation usinf dataframe
+data <- data.frame(word = names(a),freq=a)
 head(data, 10)
 
 
-#generate the wordcloud
+#World cloud graph creation
 set.seed(1056)
 wordcloud(words = data$word, freq = data$freq, min.freq = 1,
           max.words=200, random.order=FALSE, rot.per=0.35,
           colors=brewer.pal(8, "Dark2"))
 
 
-#fetch sentiment words from texts
-Sentiment <- get_nrc_sentiment(text)
+#Sentiment analysis from file
+Sentiment <- get_nrc_sentiment(content)
 head(Sentiment)
-text <- cbind(text,Sentiment)
+text <- cbind(content,Sentiment)
 
-#count the sentiment words by category
-TotalSentiment <- data.frame(colSums(text[,c(2:11)]))
+#Counting the words in dataframe
+TotalSentiment <- data.frame(colSums(content[,c(2:11)]))
 names(TotalSentiment) <- "count"
 TotalSentiment <- cbind("sentiment" = rownames(TotalSentiment), TotalSentiment)
 rownames(TotalSentiment) <- NULL
 
-#total sentiment score of all texts
+#Sentiment score graph with ggplot2
 ggplot(data = TotalSentiment, aes(x = sentiment, y = count)) +
   geom_bar(aes(fill = sentiment), stat = "identity") +
   theme(legend.position = "none") +
